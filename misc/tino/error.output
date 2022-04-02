@@ -1,0 +1,193 @@
+tino.cpp: In function ‘int main()’:
+tino.cpp:240:3: error: no matching function for call to ‘std::vector<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::vector(<brace-enclosed initializer list>)’
+  240 |   };
+      |   ^
+In file included from /usr/include/c++/11.2.0/vector:67,
+                 from tino.cpp:5:
+/usr/include/c++/11.2.0/bits/stl_vector.h:653:9: note: candidate: ‘template<class _InputIterator, class> std::vector<_Tp, _Alloc>::vector(_InputIterator, _InputIterator, const allocator_type&) [with _InputIterator = _InputIterator; <template-parameter-2-2> = <template-parameter-1-2>; _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >]’
+  653 |         vector(_InputIterator __first, _InputIterator __last,
+      |         ^~~~~~
+/usr/include/c++/11.2.0/bits/stl_vector.h:653:9: note:   template argument deduction/substitution failed:
+tino.cpp:240:3: note:   candidate expects 3 arguments, 21 provided
+  240 |   };
+      |   ^
+In file included from /usr/include/c++/11.2.0/vector:67,
+                 from tino.cpp:5:
+/usr/include/c++/11.2.0/bits/stl_vector.h:625:7: note: candidate: ‘std::vector<_Tp, _Alloc>::vector(std::initializer_list<_Tp>, const allocator_type&) [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >; std::vector<_Tp, _Alloc>::allocator_type = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >]’
+  625 |       vector(initializer_list<value_type> __l,
+      |       ^~~~~~
+/usr/include/c++/11.2.0/bits/stl_vector.h:625:7: note:   candidate expects 2 arguments, 21 provided
+/usr/include/c++/11.2.0/bits/stl_vector.h:607:7: note: candidate: ‘std::vector<_Tp, _Alloc>::vector(std::vector<_Tp, _Alloc>&&, const allocator_type&) [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >; std::vector<_Tp, _Alloc>::allocator_type = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >]’
+  607 |       vector(vector&& __rv, const allocator_type& __m)
+      |       ^~~~~~
+/usr/include/c++/11.2.0/bits/stl_vector.h:607:7: note:   candidate expects 2 arguments, 21 provided
+/usr/include/c++/11.2.0/bits/stl_vector.h:589:7: note: candidate: ‘std::vector<_Tp, _Alloc>::vector(std::vector<_Tp, _Alloc>&&, const allocator_type&, std::false_type) [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >; std::vector<_Tp, _Alloc>::allocator_type = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >; std::false_type = std::integral_constant<bool, false>]’
+  589 |       vector(vector&& __rv, const allocator_type& __m, false_type)
+      |       ^~~~~~
+/usr/include/c++/11.2.0/bits/stl_vector.h:589:7: note:   candidate expects 3 arguments, 21 provided
+/usr/include/c++/11.2.0/bits/stl_vector.h:585:7: note: candidate: ‘std::vector<_Tp, _Alloc>::vector(std::vector<_Tp, _Alloc>&&, const allocator_type&, std::true_type) [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >; std::vector<_Tp, _Alloc>::allocator_type = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >; std::true_type = std::integral_constant<bool, true>]’
+  585 |       vector(vector&& __rv, const allocator_type& __m, true_type) noexcept
+      |       ^~~~~~
+/usr/include/c++/11.2.0/bits/stl_vector.h:585:7: note:   candidate expects 3 arguments, 21 provided
+/usr/include/c++/11.2.0/bits/stl_vector.h:575:7: note: candidate: ‘std::vector<_Tp, _Alloc>::vector(const std::vector<_Tp, _Alloc>&, const allocator_type&) [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >; std::vector<_Tp, _Alloc>::allocator_type = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >]’
+  575 |       vector(const vector& __x, const allocator_type& __a)
+      |       ^~~~~~
+/usr/include/c++/11.2.0/bits/stl_vector.h:575:7: note:   candidate expects 2 arguments, 21 provided
+/usr/include/c++/11.2.0/bits/stl_vector.h:572:7: note: candidate: ‘std::vector<_Tp, _Alloc>::vector(std::vector<_Tp, _Alloc>&&) [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >]’
+  572 |       vector(vector&&) noexcept = default;
+      |       ^~~~~~
+/usr/include/c++/11.2.0/bits/stl_vector.h:572:7: note:   candidate expects 1 argument, 21 provided
+/usr/include/c++/11.2.0/bits/stl_vector.h:553:7: note: candidate: ‘std::vector<_Tp, _Alloc>::vector(const std::vector<_Tp, _Alloc>&) [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >]’
+  553 |       vector(const vector& __x)
+      |       ^~~~~~
+/usr/include/c++/11.2.0/bits/stl_vector.h:553:7: note:   candidate expects 1 argument, 21 provided
+/usr/include/c++/11.2.0/bits/stl_vector.h:522:7: note: candidate: ‘std::vector<_Tp, _Alloc>::vector(std::vector<_Tp, _Alloc>::size_type, const value_type&, const allocator_type&) [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >; std::vector<_Tp, _Alloc>::size_type = long unsigned int; std::vector<_Tp, _Alloc>::value_type = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; std::vector<_Tp, _Alloc>::allocator_type = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >]’
+  522 |       vector(size_type __n, const value_type& __value,
+      |       ^~~~~~
+/usr/include/c++/11.2.0/bits/stl_vector.h:522:7: note:   candidate expects 3 arguments, 21 provided
+/usr/include/c++/11.2.0/bits/stl_vector.h:510:7: note: candidate: ‘std::vector<_Tp, _Alloc>::vector(std::vector<_Tp, _Alloc>::size_type, const allocator_type&) [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >; std::vector<_Tp, _Alloc>::size_type = long unsigned int; std::vector<_Tp, _Alloc>::allocator_type = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >]’
+  510 |       vector(size_type __n, const allocator_type& __a = allocator_type())
+      |       ^~~~~~
+/usr/include/c++/11.2.0/bits/stl_vector.h:510:7: note:   candidate expects 2 arguments, 21 provided
+/usr/include/c++/11.2.0/bits/stl_vector.h:497:7: note: candidate: ‘std::vector<_Tp, _Alloc>::vector(const allocator_type&) [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >; std::vector<_Tp, _Alloc>::allocator_type = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >]’
+  497 |       vector(const allocator_type& __a) _GLIBCXX_NOEXCEPT
+      |       ^~~~~~
+/usr/include/c++/11.2.0/bits/stl_vector.h:497:7: note:   candidate expects 1 argument, 21 provided
+/usr/include/c++/11.2.0/bits/stl_vector.h:487:7: note: candidate: ‘std::vector<_Tp, _Alloc>::vector() [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >]’
+  487 |       vector() = default;
+      |       ^~~~~~
+/usr/include/c++/11.2.0/bits/stl_vector.h:487:7: note:   candidate expects 0 arguments, 21 provided
+tino.cpp:241:22: error: ‘std::views’ has not been declared
+  241 |   auto s = v | std ::views ::reverse | std ::views ::drop(12) |
+      |                      ^~~~~
+tino.cpp:241:46: error: ‘std::views’ has not been declared
+  241 |   auto s = v | std ::views ::reverse | std ::views ::drop(12) |
+      |                                              ^~~~~
+tino.cpp:242:18: error: ‘std::views’ has not been declared
+  242 |            std ::views ::reverse | std ::views ::drop(2) |
+      |                  ^~~~~
+tino.cpp:242:42: error: ‘std::views’ has not been declared
+  242 |            std ::views ::reverse | std ::views ::drop(2) |
+      |                                          ^~~~~
+tino.cpp:243:18: error: ‘std::views’ has not been declared
+  243 |            std ::views ::filter([](auto k) {
+      |                  ^~~~~
+tino.cpp:247:18: error: ‘get’ is not a member of ‘std’; did you mean ‘getc’?
+  247 |   auto z = std ::get<1>(v[0]).size();
+      |                  ^~~
+      |                  getc
+tino.cpp:247:30: error: invalid use of incomplete type ‘const value_type’ {aka ‘const class std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >’}
+  247 |   auto z = std ::get<1>(v[0]).size();
+      |                              ^
+In file included from /usr/include/c++/11.2.0/bits/move.h:57,
+                 from /usr/include/c++/11.2.0/bits/nested_exception.h:40,
+                 from /usr/include/c++/11.2.0/exception:148,
+                 from /usr/include/c++/11.2.0/ios:39,
+                 from /usr/include/c++/11.2.0/ostream:38,
+                 from /usr/include/c++/11.2.0/iostream:39,
+                 from tino.cpp:1:
+/usr/include/c++/11.2.0/type_traits:2591:11: note: declaration of ‘__gnu_cxx::__alloc_traits<std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >, std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >::value_type’ {aka ‘class std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >’}
+ 2591 |     class tuple;
+      |           ^~~~~
+In file included from /usr/include/c++/11.2.0/vector:67,
+                 from tino.cpp:5:
+/usr/include/c++/11.2.0/bits/stl_vector.h: In instantiation of ‘std::vector<_Tp, _Alloc>::const_reference std::vector<_Tp, _Alloc>::operator[](std::vector<_Tp, _Alloc>::size_type) const [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >; std::vector<_Tp, _Alloc>::const_reference = const std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >&; std::vector<_Tp, _Alloc>::size_type = long unsigned int]’:
+tino.cpp:247:28:   required from here
+/usr/include/c++/11.2.0/bits/stl_vector.h:1064:41: error: invalid use of incomplete type ‘class std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >’
+ 1064 |         return *(this->_M_impl._M_start + __n);
+      |                 ~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~
+In file included from /usr/include/c++/11.2.0/bits/move.h:57,
+                 from /usr/include/c++/11.2.0/bits/nested_exception.h:40,
+                 from /usr/include/c++/11.2.0/exception:148,
+                 from /usr/include/c++/11.2.0/ios:39,
+                 from /usr/include/c++/11.2.0/ostream:38,
+                 from /usr/include/c++/11.2.0/iostream:39,
+                 from tino.cpp:1:
+/usr/include/c++/11.2.0/type_traits:2591:11: note: declaration of ‘class std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >’
+ 2591 |     class tuple;
+      |           ^~~~~
+In file included from /usr/include/c++/11.2.0/vector:67,
+                 from tino.cpp:5:
+/usr/include/c++/11.2.0/bits/stl_vector.h: In instantiation of ‘std::_Vector_base<_Tp, _Alloc>::~_Vector_base() [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >]’:
+/usr/include/c++/11.2.0/bits/stl_vector.h:683:7:   required from ‘std::vector<_Tp, _Alloc>::~vector() [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >]’
+tino.cpp:240:3:   required from here
+/usr/include/c++/11.2.0/bits/stl_vector.h:336:49: error: invalid use of incomplete type ‘class std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >’
+  336 |                       _M_impl._M_end_of_storage - _M_impl._M_start);
+      |                       ~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11.2.0/bits/move.h:57,
+                 from /usr/include/c++/11.2.0/bits/nested_exception.h:40,
+                 from /usr/include/c++/11.2.0/exception:148,
+                 from /usr/include/c++/11.2.0/ios:39,
+                 from /usr/include/c++/11.2.0/ostream:38,
+                 from /usr/include/c++/11.2.0/iostream:39,
+                 from tino.cpp:1:
+/usr/include/c++/11.2.0/type_traits:2591:11: note: declaration of ‘class std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >’
+ 2591 |     class tuple;
+      |           ^~~~~
+/usr/include/c++/11.2.0/type_traits: In instantiation of ‘struct std::is_destructible<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >’:
+/usr/include/c++/11.2.0/bits/stl_construct.h:177:51:   required from ‘void std::_Destroy(_ForwardIterator, _ForwardIterator) [with _ForwardIterator = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >*]’
+/usr/include/c++/11.2.0/bits/alloc_traits.h:746:15:   required from ‘void std::_Destroy(_ForwardIterator, _ForwardIterator, std::allocator<_T2>&) [with _ForwardIterator = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >*; _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >]’
+/usr/include/c++/11.2.0/bits/stl_vector.h:680:15:   required from ‘std::vector<_Tp, _Alloc>::~vector() [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >]’
+tino.cpp:240:3:   required from here
+/usr/include/c++/11.2.0/type_traits:849:52: error: static assertion failed: template argument must be a complete class or an unbounded array
+  849 |       static_assert(std::__is_complete_or_unbounded(__type_identity<_Tp>{}),
+      |                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~
+/usr/include/c++/11.2.0/type_traits:849:52: note: ‘std::__is_complete_or_unbounded<std::__type_identity<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > > >((std::__type_identity<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >{}, std::__type_identity<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >()))’ evaluates to false
+In file included from /usr/include/c++/11.2.0/bits/alloc_traits.h:33,
+                 from /usr/include/c++/11.2.0/ext/alloc_traits.h:34,
+                 from /usr/include/c++/11.2.0/bits/basic_string.h:40,
+                 from /usr/include/c++/11.2.0/string:55,
+                 from /usr/include/c++/11.2.0/bits/locale_classes.h:40,
+                 from /usr/include/c++/11.2.0/bits/ios_base.h:41,
+                 from /usr/include/c++/11.2.0/ios:42,
+                 from /usr/include/c++/11.2.0/ostream:38,
+                 from /usr/include/c++/11.2.0/iostream:39,
+                 from tino.cpp:1:
+/usr/include/c++/11.2.0/bits/stl_construct.h: In instantiation of ‘void std::_Destroy(_ForwardIterator, _ForwardIterator) [with _ForwardIterator = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >*]’:
+/usr/include/c++/11.2.0/bits/alloc_traits.h:746:15:   required from ‘void std::_Destroy(_ForwardIterator, _ForwardIterator, std::allocator<_T2>&) [with _ForwardIterator = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >*; _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >]’
+/usr/include/c++/11.2.0/bits/stl_vector.h:680:15:   required from ‘std::vector<_Tp, _Alloc>::~vector() [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >]’
+tino.cpp:240:3:   required from here
+/usr/include/c++/11.2.0/bits/stl_construct.h:177:51: error: static assertion failed: value type is destructible
+  177 |       static_assert(is_destructible<_Value_type>::value,
+      |                                                   ^~~~~
+/usr/include/c++/11.2.0/bits/stl_construct.h:177:51: note: ‘std::integral_constant<bool, false>::value’ evaluates to false
+/usr/include/c++/11.2.0/bits/stl_construct.h:184:25: error: invalid use of incomplete type ‘std::iterator_traits<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >*>::value_type’ {aka ‘class std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >’}
+  184 |       std::_Destroy_aux<__has_trivial_destructor(_Value_type)>::
+      |                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /usr/include/c++/11.2.0/bits/move.h:57,
+                 from /usr/include/c++/11.2.0/bits/nested_exception.h:40,
+                 from /usr/include/c++/11.2.0/exception:148,
+                 from /usr/include/c++/11.2.0/ios:39,
+                 from /usr/include/c++/11.2.0/ostream:38,
+                 from /usr/include/c++/11.2.0/iostream:39,
+                 from tino.cpp:1:
+/usr/include/c++/11.2.0/type_traits:2591:11: note: declaration of ‘std::iterator_traits<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >*>::value_type’ {aka ‘class std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >’}
+ 2591 |     class tuple;
+      |           ^~~~~
+In file included from /usr/include/c++/11.2.0/x86_64-pc-linux-gnu/bits/c++allocator.h:33,
+                 from /usr/include/c++/11.2.0/bits/allocator.h:46,
+                 from /usr/include/c++/11.2.0/string:41,
+                 from /usr/include/c++/11.2.0/bits/locale_classes.h:40,
+                 from /usr/include/c++/11.2.0/bits/ios_base.h:41,
+                 from /usr/include/c++/11.2.0/ios:42,
+                 from /usr/include/c++/11.2.0/ostream:38,
+                 from /usr/include/c++/11.2.0/iostream:39,
+                 from tino.cpp:1:
+/usr/include/c++/11.2.0/ext/new_allocator.h: In instantiation of ‘void __gnu_cxx::new_allocator<_Tp>::deallocate(_Tp*, __gnu_cxx::new_allocator<_Tp>::size_type) [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; __gnu_cxx::new_allocator<_Tp>::size_type = long unsigned int]’:
+/usr/include/c++/11.2.0/bits/alloc_traits.h:492:23:   required from ‘static void std::allocator_traits<std::allocator<_CharT> >::deallocate(std::allocator_traits<std::allocator<_CharT> >::allocator_type&, std::allocator_traits<std::allocator<_CharT> >::pointer, std::allocator_traits<std::allocator<_CharT> >::size_type) [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; std::allocator_traits<std::allocator<_CharT> >::allocator_type = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >; std::allocator_traits<std::allocator<_CharT> >::pointer = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >*; std::allocator_traits<std::allocator<_CharT> >::size_type = long unsigned int]’
+/usr/include/c++/11.2.0/bits/stl_vector.h:354:19:   required from ‘void std::_Vector_base<_Tp, _Alloc>::_M_deallocate(std::_Vector_base<_Tp, _Alloc>::pointer, std::size_t) [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >; std::_Vector_base<_Tp, _Alloc>::pointer = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >*; std::size_t = long unsigned int]’
+/usr/include/c++/11.2.0/bits/stl_vector.h:335:2:   required from ‘std::_Vector_base<_Tp, _Alloc>::~_Vector_base() [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >]’
+/usr/include/c++/11.2.0/bits/stl_vector.h:683:7:   required from ‘std::vector<_Tp, _Alloc>::~vector() [with _Tp = std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >; _Alloc = std::allocator<std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > > >]’
+tino.cpp:240:3:   required from here
+/usr/include/c++/11.2.0/ext/new_allocator.h:135:13: error: invalid application of ‘__alignof__’ to incomplete type ‘std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >’
+  135 |         if (alignof(_Tp) > __STDCPP_DEFAULT_NEW_ALIGNMENT__)
+      |             ^~~~~~~~~~~~
+/usr/include/c++/11.2.0/ext/new_allocator.h:139:37: error: invalid application of ‘sizeof’ to incomplete type ‘std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >’
+  139 |                               __t * sizeof(_Tp),
+      |                                     ^~~~~~~~~~~
+/usr/include/c++/11.2.0/ext/new_allocator.h:141:48: error: invalid application of ‘__alignof__’ to incomplete type ‘std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >’
+  141 |                               std::align_val_t(alignof(_Tp)));
+      |                                                ^~~~~~~~~~~~
+/usr/include/c++/11.2.0/ext/new_allocator.h:147:35: error: invalid application of ‘sizeof’ to incomplete type ‘std::tuple<long int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > >’
+  147 |                           , __t * sizeof(_Tp)
+      |                                   ^~~~~~~~~~~
