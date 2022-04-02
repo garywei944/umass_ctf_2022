@@ -1,6 +1,8 @@
 .idea
 *.zip
 *.tar.gz
+ghidra
+.gdb_history
 
 ### Python template
 # Byte-compiled / optimized / DLL files
