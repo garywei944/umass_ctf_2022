@@ -1,0 +1,23 @@
+Foremost version 1.5.7 by Jesse Kornblum, Kris Kendall, and Nick Mikus
+Audit File
+
+Foremost started at Sat Apr  2 04:25:24 2022
+Invocation: foremost mere.jpg 
+Output directory: /home/aris/projects/umass_ctf_2022/misc/mere/output
+Configuration file: /etc/foremost.conf
+------------------------------------------------------------------
+File: mere.jpg
+Start: Sat Apr  2 04:25:24 2022
+Length: 672 KB (688818 bytes)
+ 
+Num	 Name (bs=512)	       Size	 File Offset	 Comment 
+
+0:	00000000.jpg 	      42 KB 	          0 	 
+Finish: Sat Apr  2 04:25:24 2022
+
+1 FILES EXTRACTED
+	
+jpg:= 1
+------------------------------------------------------------------
+
+Foremost finished at Sat Apr  2 04:25:24 2022

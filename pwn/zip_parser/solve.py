@@ -19,18 +19,11 @@ if args.GDB:
         c
     """)
 
-# io.send(b'00000128')
+io.send(b'00000128')
 
-# s = b'aaaabaaacaaadaaaeaaa' \
-#     b'faaagaaahaaaiaaajaaakaaalaaamaaanaaaoaaapaaaqaaaraaasaaataaauaaavaaawaaaxaaayaaazaabbaabcaabdaabeaabfaab'
-#
-# payload = b''
-# payload += p32(0x06054b50)
-# payload += s[:20]
-# payload += s[20:]
+payload = b''
+payload += p32(0x06054b50)
 
 # can control header
-
-io.sendline(payload)
 
 io.interactive()
