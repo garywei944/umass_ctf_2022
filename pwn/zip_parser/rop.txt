@@ -136,3 +136,10 @@ Gadgets information
 0x000000000040100f : test rax, rax ; je 0x401016 ; call rax
 
 Unique gadgets found: 134
+
+ROP chain generation
+===========================================================
+
+- Step 1 -- Write-what-where gadgets
+
+	[-] Can't find the 'mov qword ptr [r64], r64' gadget
