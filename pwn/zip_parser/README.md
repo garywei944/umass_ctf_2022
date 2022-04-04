@@ -137,30 +137,19 @@ challenge. *(Bear with me the most useful one is in Chinese)*
 
 In short, for a binary with Partial RELRO, when a function is about to be
 called for the first time, the dynamic linker need to load its address from the
-library. `__dl_runtime_resolve(link_map, rel_offset)` is called to do the job.
+library. `__dl_runtime_resolve(link_map, rel_offset)`, the resolver is called
+to do the job.
 
-ret2dlresolve in general is to
+To do so, the running program
 
-1. call `dl_runtime_resolve` that
-    1. pop `rel_offset` and the index of the function w.r.t. GOT from stack
-    2. locate the fake `.rel.plt` table
-    3. locate the fake `.symtab` table with data load from the fake `.rel.plt`
-       table
-    4. locate the fake `.strtab` table with data load from the fake `.symtab`
-       , and load the keyword string `"system"` from it.
-    5. look up libc, find the address of `system` and call it
-
-Therefore, to conduct a ret2dlresolve, we need
-
-1. make up fake `.rel.plt`, `.symtab`, and `.strtab` tables with carefully
-   calculated offsets
-2. write the fake tables to a writable area on stack, noted as `forged_area`
-3. calculate `rel_offset = forged_area - JMPREL`, now the resolver will find
-   our fake `.rel.plt` table instead of the real one.
-4. call `__dl_runtime_resolve(link_map, rel_offset)` to execute our desired
-   libc function, e.g. `system`.
-
-The 4th step is non-trivial, recall the instructions in `.plt`
+1. jumpy to `func@.plt` and then (using index 1 for example)
+    1. `0x401044` pushes the index 1 onto the stack, which is the index of such
+       function on GOT, used as `rel_offset` later
+2. jump to `.plt` and then
+    1. `0x401020` pushes `0x404008 <_GLOBAL_OFFSET_TABLE_+0x8>` onto the stack,
+       which is a pointer points to the ture `link_map` in `ld.so`.
+    2. `0x401026` jump to `*0x404010 <_GLOBAL_OFFSET_TABLE_+0x10>`, which is a
+       pointer points to the actual address of `__dl_runtime_resolve()`.
 
 ```text
 $ objdump -dS chal
@@ -183,12 +172,29 @@ Disassembly of section .plt:
 ...
 ```
 
-- `0x401020` pushes `404008 <_GLOBAL_OFFSET_TABLE_+0x8>`, which is a pointer
-  points to the ture `link_map` in `ld.so`.
-- `0x401026` jump to `404010 <_GLOBAL_OFFSET_TABLE_+0x10>`, which is a pointer
-  points to the actual address of `__dl_runtime_resolve`.
+3. inside `__dl_runtime_resolve()`,
+    1. pop the address of `link_map` and `rel_offset` from the stack
+    2. locate `.rel.plt` by data in the `link_map`
+    3. locate `.symtab` by data in `.rel.plt`
+    4. locate `.strtab` by data in `symtab` and load its name, e.g. "system"
+    5. load the address of such function from the library by the data loaded in
+       previous steps.
+4. call the function with arguments in registers
 
-So
+However, if we push a fake `rel_offset` on stack first then directly return
+to `.plt`, the resolver would use it to locate a fake `.rel.plt`,
+fake `.symtab`, fake `.strtab`, and eventually load our desired function from
+the library instead of the supposed one.
+
+Therefore, to conduct a ret2dlresolve, we only need to
+
+1. make up fake `.rel.plt`, `.symtab`, and `.strtab` tables carefully
+2. write the fake tables to a writable area on stack, noted as `forged_area`
+3. calculate `rel_offset = (forged_area - JMPREL) // <size of the struct>`, now
+   the resolver will find our fake `.rel.plt` table instead of the real one.
+4. make `rel_offset` the next value on stack
+5. return to `.plt`, then the resolver should resolver our desired function and
+   call it
 
 #### ret2dlresolve on 64-bit machine
 
