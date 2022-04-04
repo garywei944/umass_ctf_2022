@@ -39,12 +39,10 @@ exploit it.
 ![](images/dis_main.png)
 
 `main()` function is the entry point to the binary. It read the size of zip
-file first, and then read the zip file.
+file first, and then read the zip file. It parses *End of Central Directory*,
+*Central Directory*, *Local Header* in order after read.
 
 ![](images/diagram1.png)
-
-Then it parses *End of Central Directory*, *Central Directory*, *Local Header*
-in order.
 
 #### `parse_head()`
 
@@ -74,24 +72,22 @@ the program.
 
 ![](images/dis_parse_data.png)
 
-`parse_data()` read data from the Local file header, `memcpy` the data
-following to a buffer on stack and then `strcpy` it to a newly allocated buffer
-on heap.
+`parse_data()` read data from the Local file header, `memcpy` the compressed
+data to a buffer on stack and then `strcpy` it to a newly allocated buffer on
+heap.
 
 ![](images/lfh.png)
 
 Here comes our buffer flow vulnerability. The `comp_size` is read in line 15
 and 18 without any boundary check, and it could be a different number from the
-one load above by `parser_centdir()`. So we are eventually able to read a large
-number of bytes from the zip file we make onto the stack, causing buffer
+one loaded above by `parser_centdir()`. So we are eventually able to read a
+large number of bytes from the zip file we make onto the stack, causing buffer
 overflow and executing our ROP exploitation.
 
 ## Exploitation
 
-### Problem of ret2libc
-
 The most intuitive method to spawn a shell by a ROP exploitation is ret2libc.
-But take a loot at GOT table via `readelf -r chal`
+But take a look at GOT table via `readelf -r chal`
 
 ```text
 Relocation section '.rela.dyn' at offset 0x618 contains 5 entries:
@@ -128,10 +124,10 @@ detail in this writeup.
 I have found these online resources that are crucial for me to solve this
 challenge. *(Bear with me the most useful one is in Chinese)*
 
-#### Very useful Resources
+#### Very helpful Resources
 
 - [ret2dlresolve超详细教程(x86&x64)](https://blog.csdn.net/qq_51868336/article/details/114644569)
-  \- the resource that I follow to develop this exploitation
+  \- the resource that I followed to develop this exploitation
 - [redpwnCTF 2021 - devnull-as-a-service (pwn)](https://activities.tjhsst.edu/csc/writeups/redpwnctf-2021-devnull)
   \- clear and understandable explanation to ret2dlresolve
 - [0ctf babystack with return-to dl-resolve](https://gist.github.com/ricardo2197/8c7f6f5b8950ed6771c1cd3a116f7e62)
@@ -139,21 +135,27 @@ challenge. *(Bear with me the most useful one is in Chinese)*
 - [ret2dlresolve利用方法](https://blog.csdn.net/qq_38204481/article/details/90074190)
   \- explanation of ret2dlresolve with diagrams, but in Chinese and on x86
 
-#### ret2dlresolve on x86
+#### ret2dlresolve in general
 
-Most resources I found online are conducted on 32-bit systems. Some of them are
-well-structured and relatively easy to understand.
+In short, for a binary with Partial RELRO, when a function is about to be
+called at the first time, `__dl_runtime_resolve(link_map, rel_offset)` is
+called to load the address of that function in libc onto GOT.
 
-In short, cited
-from [redpwnCTF 2021 - devnull-as-a-service (pwn)](https://activities.tjhsst.edu/csc/writeups/redpwnctf-2021-devnull)
+So ret2dlresolve in general is to
 
-> If a function needs to be resolved (i.e. the binary does not use Full RELRO and the function is being called for the first time), then the PLT will push an offset and jump into the resolver to fill in the relocation and then jump into the real function. There are several ELF structures that facilitate this process:
->
-> 1. the resolver uses the offset pushed by the PLT stub to look up the function’s ElfW(Rel)/ElfW(Rela) from the ELF JMPREL section
-> 2. the resolver uses the r_info from the ElfW(Rel)/ElfW(Rela) to look up the function’s ElfW(Sym) from the ELF SYMTAB section
-> 3. the resolver uses the st_name from the ElfW(Sym) to look up the function’s name from the ELF STRTAB section
-> 4. the resolver uses the r_info from the ElfW(Rel)/ElfW(Rela) to look up the function’s vernum from the ELF VERSYM section
+1. call `dl_runtime_resolve` with fake `rel_offset` that makes the solver
+    1. locate the fake IMPREL table and get offset to find SYMTAB table with
+       other necessary information
+    2. locate the fake SYMTAB table and get offset to find STRTAB table with
+       other necessary information
+    3. load our desired symbol name from the fake STRTAB table we made. e.g.
+       'system'
+    4. resolve our desired function from libc and execute it
 
+Therefore, to conduct a ret2resolve, we need
+
+1. make up fake IMPREL, SYMTAB, STRTAB with carefully calculated offsets
+2. write the tables to a writable area near 
 
 ## Execution
 
