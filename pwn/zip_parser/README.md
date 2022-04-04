@@ -117,9 +117,7 @@ libc or further return to a `system` libc call.
 ### ret2dlresolve
 
 After hours of googling, ret2dlresolve is the attack method that works if we
-can execute a ROP chain but can't leak any address from memory. It is very
-complicate and hard to understand, and I don't want to explain how it works in
-detail in this writeup.
+can execute a ROP chain but can't leak any address from memory.
 
 I have found these online resources that are crucial for me to solve this
 challenge. *(Bear with me the most useful one is in Chinese)*
@@ -138,24 +136,126 @@ challenge. *(Bear with me the most useful one is in Chinese)*
 #### ret2dlresolve in general
 
 In short, for a binary with Partial RELRO, when a function is about to be
-called at the first time, `__dl_runtime_resolve(link_map, rel_offset)` is
-called to load the address of that function in libc onto GOT.
+called for the first time, the dynamic linker need to load its address from the
+library. `__dl_runtime_resolve(link_map, rel_offset)` is called to do the job.
 
-So ret2dlresolve in general is to
+ret2dlresolve in general is to
 
-1. call `dl_runtime_resolve` with fake `rel_offset` that makes the solver
-    1. locate the fake IMPREL table and get offset to find SYMTAB table with
-       other necessary information
-    2. locate the fake SYMTAB table and get offset to find STRTAB table with
-       other necessary information
-    3. load our desired symbol name from the fake STRTAB table we made. e.g.
-       'system'
-    4. resolve our desired function from libc and execute it
+1. call `dl_runtime_resolve` that
+    1. pop `rel_offset` and the index of the function w.r.t. GOT from stack
+    2. locate the fake `.rel.plt` table
+    3. locate the fake `.symtab` table with data load from the fake `.rel.plt`
+       table
+    4. locate the fake `.strtab` table with data load from the fake `.symtab`
+       , and load the keyword string `"system"` from it.
+    5. look up libc, find the address of `system` and call it
 
-Therefore, to conduct a ret2resolve, we need
+Therefore, to conduct a ret2dlresolve, we need
 
-1. make up fake IMPREL, SYMTAB, STRTAB with carefully calculated offsets
-2. write the tables to a writable area near 
+1. make up fake `.rel.plt`, `.symtab`, and `.strtab` tables with carefully
+   calculated offsets
+2. write the fake tables to a writable area on stack, noted as `forged_area`
+3. calculate `rel_offset = forged_area - JMPREL`, now the resolver will find
+   our fake `.rel.plt` table instead of the real one.
+4. call `__dl_runtime_resolve(link_map, rel_offset)` to execute our desired
+   libc function, e.g. `system`.
+
+The 4th step is non-trivial, recall the instructions in `.plt`
+
+```text
+$ objdump -dS chal
+
+...
+Disassembly of section .plt:
+
+0000000000401020 <.plt>:
+  401020:	ff 35 e2 2f 00 00    	pushq  0x2fe2(%rip)        # 404008 <_GLOBAL_OFFSET_TABLE_+0x8>
+  401026:	f2 ff 25 e3 2f 00 00 	bnd jmpq *0x2fe3(%rip)        # 404010 <_GLOBAL_OFFSET_TABLE_+0x10>
+  40102d:	0f 1f 00             	nopl   (%rax)
+  401030:	f3 0f 1e fa          	endbr64 
+  401034:	68 00 00 00 00       	pushq  $0x0
+  401039:	f2 e9 e1 ff ff ff    	bnd jmpq 401020 <.plt>
+  40103f:	90                   	nop
+  401040:	f3 0f 1e fa          	endbr64 
+  401044:	68 01 00 00 00       	pushq  $0x1
+  401049:	f2 e9 d1 ff ff ff    	bnd jmpq 401020 <.plt>
+  40104f:	90                   	nop
+...
+```
+
+- `0x401020` pushes `404008 <_GLOBAL_OFFSET_TABLE_+0x8>`, which is a pointer
+  points to the ture `link_map` in `ld.so`.
+- `0x401026` jump to `404010 <_GLOBAL_OFFSET_TABLE_+0x10>`, which is a pointer
+  points to the actual address of `__dl_runtime_resolve`.
+
+So
+
+#### ret2dlresolve on 64-bit machine
+
+After reading the source code of
+pwntools [Ret2dlresolvePayload](https://github.com/Gallopsled/pwntools/blob/67b28491a4/pwnlib/rop/ret2dlresolve.py#L215-L369)
+and [rop.ret2dlresolve](https://github.com/Gallopsled/pwntools/blob/67b28491a4/pwnlib/rop/rop.py#L1501-L1513)
+, I realized that this is also the general approach to conduct ret2dlresolve on
+64-bit machine. But a few more
+
+However, it doesn't work well sometimes.
+
+#### Problems on 64-bit machine with large page
+
+The general approach has problems for 64-bit binary with large gap between text
+and writable sections. Mostly we write fake structures in BSS section of the
+binary, then we calculate `rel_offset = forged_area - JMPREL` resulting in a
+very large
+`rel_offset` and eventually guarantees a segmentation fault.
+
+`_dl_fixup()` also plays a role here which is not an issue on 32-bit machines.
+It is explained in detail
+in [redpwnCTF 2021 - devnull-as-a-service (pwn)](https://activities.tjhsst.edu/csc/writeups/redpwnctf-2021-devnull) '
+s write up.
+
+> The problem with this attack is that _dl_fixup uses the same array index for both SYMTAB and VERSYM. Each element in each of these arrays is a different size (24 and 2 bytes, respectively), so using the same index for both results in vastly different addresses for the structs. In binaries with BSS close to the other sections, this can sometimes work out. However, in 64-bit binaries that use huge pages (so BSS is very far from the other sections), this guarantees a segmentation fault when trying to index VERSYM if the structs are placed in BSS.
+
+This is the case where pwntools automation ret2dlresolve doesn't work.
+
+```text
+[!] Ret2dlresolve is likely impossible in this ELF (too big gap between text and writable sections).
+    If you get a segmentation fault with fault_addr = 0x42afd8, try a different technique.
+```
+
+#### pwntools automation ret2dlresolve solution
+
+Fortunately, the binary for this challenge doesn't have the issue above.
+Looking up the sections' headers, we call tell `.bss` is at `0x404080`
+and `.rela.plt` is at `0x400690`.
+
+```text
+$ readelf -S chal
+
+There are 31 section headers, starting at offset 0x3c60:
+
+Section Headers:
+  [Nr] Name              Type             Address           Offset
+       Size              EntSize          Flags  Link  Info  Align
+...
+  [11] .rela.plt         RELA             0000000000400690  00000690
+       00000000000000d8  0000000000000018  AI       6    24     8
+...
+  [26] .bss              NOBITS           0000000000404080  00003070
+       0000000000000048  0000000000000000  WA       0     0     32
+...
+```
+
+So the most intuitive solution to this challenge is to use pwntools automation
+ret2dlresolve functions. [seal9055](https://github.com/seal9055), the author of
+this challenge, gives his surprisingly nice and
+concise [exploitation script](https://github.com/UMassCybersecurity/UMassCTF-2022-challenges/blob/main/pwn/zip_parser/solver/exploit.py)
+by this method.
+
+#### Another ret2dlresolve approach, corrupt
+
+It makes a lot of confusion to me at first
+because [redpwnCTF 2021 - devnull-as-a-service (pwn)](https://activities.tjhsst.edu/csc/writeups/redpwnctf-2021-devnull)
+has a variable named `link_map` in the exploitation. But it turns out that he
 
 ## Execution
 
