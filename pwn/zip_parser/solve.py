@@ -43,7 +43,7 @@ log.info(f'.rel.plt address: {hex(JMPREL)}')
 log.info(f'writable buffer address: {hex(forge_area)}')
 
 ###############################################################################
-# Make fake link_map
+# Forge link_map and other tables
 ###############################################################################
 BITMAP_64 = (1 << 64) - 1
 

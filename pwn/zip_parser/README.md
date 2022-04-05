@@ -19,8 +19,6 @@ In this writeup, I will go through the thought process from developing this
 challenge, and including a detailed explanation to my approach of ret2dlresolve
 and multiple counterpart approaches.
 
-[TOC]
-
 ## Static Analysis
 
 To investigate the challenge binary, we can begin with some checksec and
@@ -176,10 +174,11 @@ Disassembly of section .plt:
 
 3. inside `__dl_runtime_resolve()`,
     1. pop the address of `link_map` and `rel_offset` from the stack
-    2. locate `.rel.plt` using `link_map` and `rel_offset`
-    3. locate `.symtab` using data in `.rel.plt`
-    4. locate `.strtab` using data in `symtab` and load its name, e.g. "system"
-    5. load the address of such function from the library
+    2. locate the strut in `.dynamic` for `.rel.plt` using `link_map`
+    3. locate `.rel.plt` using data in `.dynamic` and `rel_offset`
+    4. locate `.symtab` using data in `.rel.plt`
+    5. locate `.strtab` using data in `symtab` and load its name, e.g. "system"
+    6. load the address of such function from the library into GOT
 4. call the function with arguments in registers
 
 #### ret2dlresolve in general
@@ -227,7 +226,7 @@ This is the case where pwntools automation ret2dlresolve doesn't work.
 #### pwntools automation ret2dlresolve solution
 
 Fortunately, the binary for this challenge doesn't have the issue above.
-Looking up the sections' headers, we call tell `.bss` is at `0x404080`
+Looking up the sections' headers, we can tell `.bss` is at `0x404080`
 and `.rela.plt` is at `0x400690`.
 
 ```text
@@ -255,20 +254,20 @@ by this method.
 
 ### Another approach to ret2dlresolve - corrupt `.dynamic`
 
-This approach is described
+Another approach is described
 in [redpwnCTF 2021 - devnull-as-a-service (pwn)](https://activities.tjhsst.edu/csc/writeups/redpwnctf-2021-devnull)
 . It makes a lot of confusion to me at first because he has a variable
 named `link_map` in the exploitation. However, it turns out that he didn't
-manually make a `link_map`, but to corrupt the address of DT_STRTAB and only
-make a fake `.strtab` table with the string `system`.
+manually make a `link_map`, but to corrupt the address of DT_STRTAB
+in `.dynamic` and only make a fake `.strtab` table with the string `system`.
 
 This approach seems much easier than the previous one, but the only problem is
 that it seems the `.dynamic` section is not writable in most of the cases. I'm
-not sure how he successfully make the exploitation work.
+not sure if he successfully make the exploitation work.
 
 ### Yet another approach to ret2dlresolve - manually forge `link_map`
 
-This idea is given
+Yet another idea is proposed
 by [ret2dlresolve超详细教程(x86&x64)](https://blog.csdn.net/qq_51868336/article/details/114644569)
 , and I didn't find an English resource related to it.
 
@@ -388,8 +387,14 @@ So our next goal is to forge `link_map->l_addr` and `sym->st_value` to be
 - `link_map->l_addr = addr_system - addr_xxxx`
 - `sym->st_value = real_xxxx`
 
-and set the 6th byte of sym not equals to zero. To do so, we need to refer to
-the struct used in `.symtab`.
+and set the 6th byte of sym not equals to zero. So that we would have
+
+```text
+value = addr_system - addr_xxxx + real_xxxx = real_system
+```
+
+as the resolved address. To do so, we need to refer to the struct used
+in `.symtab`.
 
 ```cpp
 typedef struct {
@@ -402,8 +407,9 @@ typedef struct {
 } Elf64_Sym;
 ```
 
-If we can make the DT_SYMTAB pointer in `link_map` points to `xxxx@got - 0x8`,
-we have `st_value = real_xxxx`, and with great chane `st_other != 0`.
+If we can make the DT_SYMTAB pointer points to `xxxx@got - 0x8` after several
+look-ups, we will have `st_value = real_xxxx`, and with great
+chane `st_other != 0`.
 
 With all theory set up, we are ready to forge the `link_map` and other tables.
 
@@ -411,7 +417,7 @@ With all theory set up, we are ready to forge the `link_map` and other tables.
 
 Recall the struct of `link_map`
 
-```text
+```cpp
 struct link_map {
   /* Difference between the address in the ELF
    file and the addresses in memory.  */
@@ -458,6 +464,10 @@ Here we only cares about
 ```python
 BITMAP_64 = (1 << 64) - 1
 
+# offset between system and target_func
+target_func = 'atoi'
+l_addr = libc.sym['system'] - libc.sym[target_func]
+
 # link_map
 link_map = flat({
     0x0: l_addr & BITMAP_64,  # l_addr
@@ -477,7 +487,8 @@ Tracking the `link_map` on gdb
 1. GOT[2], ptr to `link_map`
 2. the `link_map`
 3. `l_info[23]` in `link_map`, ptr to DT_JMPREL in _DYNAMIC
-4. DT_JMPREL in _DYNAMIC, ptr to DT_JMPREL, in structure (d_tag, d_val)
+4. DT_JMPREL in _DYNAMIC, ptr to DT_JMPREL. The struct contains `d_tag`,
+   and `d_val`, 16 bytes in total.
 5. DT_JMPREL, the `.rel.plt` table, we can tell `0x404018` at the first entry
    is the address for `strcpy@got`
 
@@ -499,7 +510,7 @@ jmprel = flat([
 ]),
 ```
 
-DT_SYMTAB and DT_STRTAB works almost the same, we need a struct for fake
+DT_SYMTAB and DT_STRTAB works almost the same. We need a struct for fake
 DT_SYMTAB in _DYNAMIC, a struct for fake `.symtab`, and a `\bin\sh\00` string.
 
 Merge the forged tables together, we end up with the following `forge_data`.
@@ -513,6 +524,7 @@ forge_area = elf.get_section_by_name(".bss")["sh_addr"] + 0x100
 # offset between system and target_func
 target_func = 'atoi'
 l_addr = libc.sym['system'] - libc.sym[target_func]
+
 forge_data = flat({
     # link_map
     0x0: l_addr & BITMAP_64,  # l_addr
@@ -571,8 +583,10 @@ rop.raw(0)  # rel_offset
 
 ### Construct zip file
 
-Recall the zip file structure from above. We just need to be careful enough and
-follow the file structure, we can make a zip file with our ROP chain.
+Recall the zip file structure from above. Just need to be careful enough and
+follow the file structure, we can make a zip file with our ROP chain. The local
+buffer on `parse_data` stack is located at `rbp - 0xa0`, so we need 0xa8 bytes
+in compressed data to trigger the buffer overflow.
 
 ```python
 PH = b'A'  # place holder
@@ -647,9 +661,9 @@ io.send(forge_data)
 io.interactive()
 ```
 
-At last, we just send the zip file with ROP included, and the program should
-read the `forge_data` on to `forge_area`. We can verify it in gdb that the
-program return to `_dl_runtime_resolve` with the correct register and stack
+At last, we just need to send the zip file with ROP included, and the program
+should read the `forge_data` on to `forge_area`. We can verify it in gdb that
+the program return to `_dl_runtime_resolve` with the correct register and stack
 setup.
 
 ![](images/gdb_before_resolve.png)
@@ -713,7 +727,7 @@ log.info(f'.rel.plt address: {hex(JMPREL)}')
 log.info(f'writable buffer address: {hex(forge_area)}')
 
 ###############################################################################
-# Make fake link_map
+# Forge link_map and other tables
 ###############################################################################
 BITMAP_64 = (1 << 64) - 1
 
@@ -873,7 +887,7 @@ details.
    implementation of `ld.so`. So it probably won't work for a different
    implementation of `ld.so`.
 3. To deal with the 2nd limitation, we probably could do something with the
-   DT_VERSYM byte in `link_map` and we then need to worry about more part in
+   DT_VERSYM byte in `link_map` and we then need to worry about more parts in
    multiple sections, and I believe it won't be easier than my approach. It
    also required to manually forge `link_map` anyway.
 
