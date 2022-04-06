@@ -17,7 +17,9 @@
 
 Solved after the competition
 
-- [misc/jeopardyV1](misc/jeopardyV2) (5 min after the competition ends)
+- [misc/jeopardyV1](misc/jeopardyV2)
+    - 5 min after the competition ends. We would be the 3rd place on UMass
+      scoreboard with literally 5 more min.
 
 ## Writeups
 
@@ -31,3 +33,19 @@ Solved after the competition
 
 We ranked ***37 / 314*** on the overall scoreboard, the ***4th place*** on
 UMass scoreboard.
+
+## UMass scoreboard
+
+![](umass_scoreboard.png)
+
+## Directory layout for challenges
+
+- `src`: source code and server setup
+- `static`: challenge files released to competitors during CTF
+- `archived`: output / temp files I generated during competition
+    - `workspace`: demos / trial & error
+- `images`: images for writeup
+- `README.md`: writeup
+
+The solution is put directly under each challenge directory and should be ready
+to go.

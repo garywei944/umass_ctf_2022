@@ -12,7 +12,8 @@ local = True
 if local:
     io = elf.process()
 else:
-    host = '34.139.216.197'
+    # host = '34.139.216.197'
+    host = 'localhost'
     port = 7293
     io = remote(host, port)
 
