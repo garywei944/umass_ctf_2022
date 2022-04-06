@@ -24,7 +24,8 @@ Solved after the competition
 
 ## Writeups
 
-- [pwn/zip_parser](https://github.com/garywei944/umass_ctf_2022/blob/main/pwn/zip_parser/README.md)
+- [pwn/zip_parser](pwn/zip_parser/README.md)
+- [crypto/hatmash](crypto/hatmash/README.md)
 
 ## Team: **Hide on bush**
 

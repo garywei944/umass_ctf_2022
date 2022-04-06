@@ -48,23 +48,7 @@ def mash(x, A, B, C, T):
     return not (ret ^ lenC ^ T).any()
 
 
-MAX_ITER = 1 << 10
-
-
-def find_expand_len(t, c, max_iter=MAX_ITER):
-    """
-    find the length of c s.t. `ccccc...cccct` equivalent to `t`
-    """
-    r = t
-    for i in range(max_iter):
-        r = (c @ r) % 2  # multiple to the left
-
-        if (r == t).all():
-            return i + 1
-    return -1
-
-
-def multi_order(mat, max_iter=MAX_ITER):
+def multi_order(mat, max_iter=int(1e4)):
     """
     Compute the multiplicative order of matrix mat s.t.
 
@@ -72,13 +56,17 @@ def multi_order(mat, max_iter=MAX_ITER):
 
     Then i-1 is the multi. order
     """
-    return find_expand_len(mat, mat, max_iter)
+    r = mat
+    for i in range(max_iter):
+        r = (r @ mat) % 2
+
+        if (r == mat).all():
+            return i + 1
+    return -1
 
 
 ALP = range(ord(' '), ord('~'))
 TARGET_PASS = b"gib m3 flag plox?"
-
-MAX_PAYLOAD = 1 << 14
 
 
 def main():
@@ -103,11 +91,6 @@ def main():
     take the server several minutes to do the naive implementation of matrix
     multiplication. In this case we just run multiple times and hope we could
     end up with a small enough multi. order.
-
-    ### EDIT: shorter payload
-
-    using `aaaaaaa...aaab` to expand `b` instead of just `bbbbbbb...bbb`. This
-    allows us to potentially use any character in the ALP.
     """
     log.info('*' * 120)
     log.info('Start a new try!')
@@ -136,12 +119,8 @@ def main():
 
     T = bytes_to_mat(TARGET)
 
-    key_map = {}
-    for c in ALP:
-        key_map[c] = chr_to_mat(c, A, B)
-
     mo_map = {}
-    mo_C = multi_order(C, max_iter=MAX_PAYLOAD)
+    mo_C = multi_order(C)
     log.info('-' * 50)
 
     if mo_C == -1:
@@ -151,12 +130,10 @@ def main():
         io.close()
         return
 
-    for t in set(TARGET_PASS):
-        log.info(f'computing to expand "{chr(t)}"')
-        for c in ALP:
-            r = find_expand_len(key_map[t], key_map[c])
-            if r != -1:
-                mo_map[(chr(t), chr(c))] = r
+    for c in set(TARGET_PASS[:-1]):
+        r = multi_order(chr_to_mat(c, A, B))
+        if r != -1:
+            mo_map[chr(c)] = r
 
     log.info('multi. oder table')
     log.info(pprint.pformat(mo_map))
@@ -168,13 +145,13 @@ def main():
         return
 
     # Use the char with the smallest multi. order
-    target_chr, fill_chr = min(mo_map, key=lambda x: np.lcm(mo_map[x], mo_C))
-    target_mo = mo_map[(target_chr, fill_chr)]
+    target_chr = min(mo_map, key=mo_map.get)
+    target_mo = mo_map[target_chr]
     target_idx = TARGET_PASS.rindex(target_chr.encode())
 
     log.info(
-        f'Trying to expand "{target_chr}" at index {target_idx} with '
-        f'{target_mo} times "{fill_chr}"'
+        f'Using {target_chr} at index {target_idx} as target char with multi. '
+        f'order of {target_mo}'
     )
     log.info('-' * 50)
 
@@ -186,7 +163,7 @@ def main():
     log.info(f'LCM of mo_chr and mo_C: {lcm_mo}')
 
     # Try a new one if the payload is going to be huge
-    if lcm_mo > MAX_PAYLOAD:  # approx. 16000
+    if lcm_mo > (1 << 16):  # approx. 64000
         log.warn('Payload too large! Do another one.')
         log.info('-' * 50)
 
@@ -194,7 +171,7 @@ def main():
         return
 
     payload = TARGET_PASS[:target_idx]
-    payload += lcm_mo * fill_chr.encode()
+    payload += lcm_mo * target_chr.encode()
     payload += TARGET_PASS[target_idx:]
 
     log.info(f'Pass self check: {mash(payload, A, B, C, T)}')
