@@ -7,7 +7,7 @@
 - CTF archived at [CTF TIME Event](https://ctftime.org/event/1561)
 - Website: [https://ctf.umasscybersec.org/](https://ctf.umasscybersec.org/)
 
-## Challenge solved
+## Solved challenges
 
 - [pwn/zip_parser](pwn/zip_parser) (500)
 - [misc/tino](misc/tino) (489)
