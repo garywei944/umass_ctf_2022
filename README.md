@@ -20,6 +20,7 @@ Solved after the competition
 - [misc/jeopardyV1](misc/jeopardyV2)
     - 5 min after the competition ends. We would be the 3rd place on UMass
       scoreboard with literally 5 more min.
+- [crypto/hatmash](crypto/hatmash)
 
 ## Writeups
 
@@ -43,7 +44,7 @@ UMass scoreboard.
 - `src`: source code and server setup
 - `static`: challenge files released to competitors during CTF
 - `archived`: output / temp files I generated during competition
-    - `workspace`: demos / trial & error
+- `workspace`: demos / trial & error
 - `images`: images for writeup
 - `README.md`: writeup
 
