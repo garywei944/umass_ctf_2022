@@ -84,7 +84,7 @@ collision, `mash(passphrase) == mash(b'gib m3 flag plox?')`.
 
 ## Approach to the solution
 
-The first thing I did is to write everything in numpy. numpy array is
+The first thing I did was to write everything in numpy. numpy array is
 implemented based on C/C++ and use multiprocessing for matrix multiplication
 which greatly increase the runtime speed.
 
@@ -122,7 +122,7 @@ Implemented at [`solve.old.py`](solve.old.py).
 
 ## Shorter payload
 
-numpy matrix multiplication is quick, so we don't care much in computing the
+numpy matrix multiplication is fast, so we don't care much in computing the
 multi. order. But we don't want payload to be too large b/c `hatmash.py`
 implemented naive matrix multiplication and that is thousands of times slower.
 
