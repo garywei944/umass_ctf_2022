@@ -36,10 +36,6 @@ Solved after the competition
 We ranked ***37 / 314*** on the overall scoreboard, the ***4th place*** on
 UMass scoreboard.
 
-## UMass scoreboard
-
-![](umass_scoreboard.png)
-
 ## Directory layout for challenges
 
 - `src`: source code and server setup
@@ -51,3 +47,7 @@ UMass scoreboard.
 
 The solution is put directly under each challenge directory and should be ready
 to go.
+
+## UMass scoreboard
+
+![](umass_scoreboard.png)
