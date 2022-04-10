@@ -11,6 +11,7 @@ world scenario of a zip parser that contains a buffer overflow vulnerability
 due to lack of boundary check. What makes the challenge extremely hard and
 non-trivial is that the binary doesn't have any output function loaded on the
 GOT, which makes it impossible to leak any memory before exploitation.
+ret2dlresolve attack is a suitable solution in such scenario.
 
 Also, yet the pwntools automation functions for ret2dlresolve works well for
 this challenge, it doesn't work for some 64-bit binaries with large gap between
