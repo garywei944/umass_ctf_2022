@@ -4,6 +4,8 @@ ret2dlresolve on x86_64 with large gap between text and writable sections
 
 by garywei944 on 4/4/2022
 
+## TL;DR
+
 `zip_parser` is a pwn challenge on UMass CTF 2022. The binary mimics a real
 world scenario of a zip parser that contains a buffer overflow vulnerability
 due to lack of boundary check. What makes the challenge extremely hard and
