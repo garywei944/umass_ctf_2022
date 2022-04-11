@@ -6,6 +6,7 @@
   at [UMassCybersecurity/UMassCTF-2022-challenges](https://github.com/UMassCybersecurity/UMassCTF-2022-challenges)
 - CTF archived at [CTF TIME Event](https://ctftime.org/event/1561)
 - Website: [https://ctf.umasscybersec.org/](https://ctf.umasscybersec.org/)
+- Team's page: [https://ctf.umasscybersec.org/teams/372](https://ctf.umasscybersec.org/teams/372)
 
 ## Solved challenges
 
